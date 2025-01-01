@@ -19,7 +19,7 @@
     "deploy": "gh-pages -d build",
     "predeploy": "npm run build"
   },
-  "homepage": "https://sirharwell.github.io/panda-royale",
+  "homepage": "https://sirharwell.github.io/panda-royale/",
   "eslintConfig": {
     "extends": [
       "react-app",
