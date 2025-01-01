@@ -1,0 +1,15 @@
+{
+  "files": {
+    "main.css": "/panda-royale/static/css/main.2c4cb139.css",
+    "main.js": "/panda-royale/static/js/main.159e6fd4.js",
+    "static/media/bamboo.png": "/panda-royale/static/media/bamboo.97a92f2ba4a91ee23ec1.png",
+    "static/media/panda.jpg": "/panda-royale/static/media/panda.4b8cb67354276e1ee6fb.jpg",
+    "index.html": "/panda-royale/index.html",
+    "main.2c4cb139.css.map": "/panda-royale/static/css/main.2c4cb139.css.map",
+    "main.159e6fd4.js.map": "/panda-royale/static/js/main.159e6fd4.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.2c4cb139.css",
+    "static/js/main.159e6fd4.js"
+  ]
+}
