@@ -3,6 +3,12 @@ import pandaImage from "./panda.jpg";
 import bambooImage from "./bamboo.png";
 import "./App.css"; // Assuming a CSS file for styling
 
+type ModalData = {
+  row: number | null;
+  col: number | null;
+  type: string | null;
+};
+
 const App = () => {
   const columns = [
     "Round",
@@ -21,7 +27,7 @@ const App = () => {
     Array.from({ length: 10 }, () => Array.from({ length: 9 }, () => ""))
   );
   const [modalVisible, setModalVisible] = useState(false);
-  const [modalData, setModalData] = useState({
+  const [modalData, setModalData] = useState<ModalData>({
     row: null,
     col: null,
     type: null,
@@ -34,7 +40,7 @@ const App = () => {
     return grid.reduce((sum, row) => sum + (Number(row[8]) || 0), 0);
   };
 
-  const handleCellPress = (row, col) => {
+  const handleCellPress = (row: number, col: number) => {
     if (col === 0) return; // Skip the "Round" column
     const columnName = columns[col];
     if (["Yellow", "Purple", "Green", "Clear", "Pink"].includes(columnName)) {
@@ -55,6 +61,8 @@ const App = () => {
 
   const handleInputSubmit = () => {
     const { row, col, type } = modalData;
+    if (row === null || col === null || type === null) return; // Guard clause
+
     const updatedGrid = [...grid];
 
     if (type === "Yellow") {
@@ -79,7 +87,7 @@ const App = () => {
     setModalVisible(false);
   };
 
-  const getCellBackgroundColor = (colIndex) => {
+  const getCellBackgroundColor = (colIndex: number) => {
     switch (columns[colIndex]) {
       case "Yellow":
         return "rgba(244, 255, 135, 0.75)";
