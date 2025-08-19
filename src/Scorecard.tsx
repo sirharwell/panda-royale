@@ -3,6 +3,7 @@ import { ref, set, onValue } from "firebase/database";
 import { db } from "./firebase";
 import pandaImage from "./panda.jpg";
 import bambooImage from "./bamboo.png";
+import { ref, set, onValue, remove, update } from "firebase/database";
 import "./App.css";
 
 type ModalData = { row: number | null; col: number | null; type: string | null; };
@@ -103,6 +104,26 @@ const Scorecard = () => {
       default:       return "rgba(240,240,240,0.75)";
     }
   };
+    const handleResetAll = () => {
+    if (window.confirm("Are you sure you want to reset all scorecards?")) {
+      const emptyGrid = Array.from({ length: 10 }, () => Array(9).fill(""));
+      const updates: any = {};
+      leaderboard.forEach((u) => {
+        updates[`users/${u.name}/grid`] = emptyGrid;
+        updates[`users/${u.name}/total`] = 0;
+      });
+      update(ref(db), updates);
+    }
+  };
+
+  const handleDeleteAll = () => {
+    if (window.confirm("Are you sure you want to DELETE ALL users? This cannot be undone.")) {
+      remove(ref(db, "users"));
+      localStorage.removeItem("username"); // clear own username
+      window.location.href = "/"; // redirect to login
+    }
+  };
+
 
   return (
     <div className="container">
@@ -142,6 +163,12 @@ const Scorecard = () => {
         {leaderboard.map((u) => (
           <div key={u.name}>{u.name}: {u.total}</div>
         ))}
+
+        {/* Admin buttons */}
+        <div className="admin-controls">
+          <button onClick={handleResetAll}>Reset All Scorecards</button>
+          <button onClick={handleDeleteAll}>Delete All Users</button>
+        </div>
       </div>
 
       {modalVisible && (
