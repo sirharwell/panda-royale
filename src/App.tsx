@@ -24,5 +24,3 @@ const LoginPage = () => {
     </div>
   );
 };
-
-export default App;
