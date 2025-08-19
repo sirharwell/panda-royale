@@ -1,2 +1,1 @@
-# panda-royale
-Created with CodeSandbox
+panda-royale cheat sheet. Just plug in your dice rolls
