@@ -8,7 +8,7 @@ const LoginPage = () => {
   const handleStart = () => {
     if (username.trim()) {
       localStorage.setItem("username", username); // keep track
-      navigate("/scorecard");
+      navigate("/Scorecard");
     }
   };
 
