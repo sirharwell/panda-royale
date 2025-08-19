@@ -1,26 +1,18 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import LoginPage from "./LoginPage";
+import Scorecard from "./Scorecard";
+import React from "react"; 
 
-const LoginPage = () => {
-  const [username, setUsername] = useState("");
-  const navigate = useNavigate();
 
-  const handleStart = () => {
-    if (username.trim()) {
-      localStorage.setItem("username", username); // keep track
-      navigate("/Scorecard");
-    }
-  };
-
+function App() {
   return (
-    <div className="login-container">
-      <h1>Enter your username</h1>
-      <input
-        type="text"
-        value={username}
-        onChange={(e) => setUsername(e.target.value)}
-      />
-      <button onClick={handleStart}>Start</button>
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<LoginPage />} />
+        <Route path="/scorecard" element={<Scorecard />} />
+      </Routes>
+    </BrowserRouter>
   );
-};
+}
+
+export default App;
