@@ -1,21 +1,18 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import React from "react";
+import { HashRouter, Routes, Route } from "react-router-dom";
 import LoginPage from "./LoginPage";
 import Scorecard from "./Scorecard";
-import React from "react";
 
-
+console.log("App loaded ✅");
 function App() {
   return (
-    <div>
-      <BrowserRouter basename="/panda-royale">
-        <Routes>
-          <Route path="/" element={<LoginPage />} />
-          <Route path="/scorecard" element={<Scorecard />} />
-        </Routes>
-      </BrowserRouter>
-    </div>
+    <HashRouter>
+      <Routes>
+        <Route path="/" element={<LoginPage />} />
+        <Route path="/scorecard" element={<Scorecard />} />
+      </Routes>
+    </HashRouter>
   );
 }
-
 
 export default App;
