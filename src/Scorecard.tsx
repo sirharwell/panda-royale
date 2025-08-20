@@ -2,229 +2,181 @@ import React, { useEffect, useState } from "react";
 import { db } from "./firebase";
 import pandaImage from "./panda.jpg";
 import bambooImage from "./bamboo.png";
-import { ref, set, onValue, remove, update } from "firebase/database";
+import { ref, set, onValue, remove } from "firebase/database";
+import { useLocation } from "react-router-dom";
 import "./App.css";
 
-type ModalData = { row: number | null; col: number | null; type: string | null; };
+type ModalData = { row: number | null; col: number | null; type: string | null };
 
 const Scorecard = () => {
-  const username = localStorage.getItem("username") || "Guest";
+  const location = useLocation();
+  const username =
+    location.state?.username ||
+    localStorage.getItem("username") ||
+    "Guest";
+
   const columns = ["Round","Yellow","Purple","Blue","Red","Green","Clear","Pink","Total"];
   const rows = Array.from({ length: 10 }, (_, i) => i + 1);
+
   const [grid, setGrid] = useState(Array.from({ length: 10 }, () => Array(9).fill("")));
   const [modalVisible, setModalVisible] = useState(false);
   const [modalData, setModalData] = useState<ModalData>({ row: null, col: null, type: null });
   const [inputValue, setInputValue] = useState("");
   const [checkbox, setCheckbox] = useState(false);
   const [redDice, setRedDice] = useState({ diceCount: "", diceSum: "" });
-  const [leaderboard, setLeaderboard] = useState<{name:string,total:number}[]>([]);
-  const location = useLocation();
-  const username = location.state?.username;
-  const [score, setScore] = useState(0);
-  const [users, setUsers] = useState<{ name: string, score: number }[]>([]);
-  const calculateTotalSum = (gridData = grid) => {
-    return gridData.reduce((sum, row) => sum + (Number(row[8]) || 0), 0);
-  };
+  const [users, setUsers] = useState<{ name: string; total: number }[]>([]);
 
-  // Load user data from Firebase
-  useEffect(() => {
-    const db = getDatabase();
-    const usersRef = ref(db, "users");
-
-    return onValue(usersRef, (snapshot) => {
-      const data = snapshot.val() || {};
-      const formatted = Object.entries(data).map(([name, info]: any) => ({
-        name,
-        score: info.score || 0
-      }));
-      // sort highest → lowest
-      formatted.sort((a, b) => b.score - a.score);
-      setUsers(formatted);
-    });
-  }, []);
-
-  const handleScoreChange = (delta: number) => {
-    const db = getDatabase();
-    const newScore = score + delta;
-    setScore(newScore);
-    set(ref(db, "users/" + username), { score: newScore });
-  };
-
-  const saveGrid = (newGrid: string[][]) => {
-    const total = calculateTotalSum(newGrid);
-    set(ref(db, `users/${username}`), {
-      grid: newGrid,
-      total
+  // --- calculate total from grid ---
+  const calculateTotals = (grid: string[][]) => {
+    return grid.map((row, i) => {
+      if (i === 0) return row;
+      const total = row.slice(1, -1).reduce((sum, cell) => sum + (parseInt(cell) || 0), 0);
+      row[row.length - 1] = total.toString();
+      return row;
     });
   };
 
-  const handleCellPress = (row:number, col:number) => {
-    if (col === 0) return;
-    const columnName = columns[col];
-    setModalData({ row, col, type: columnName });
+  // --- save grid and total to firebase ---
+  const saveGrid = (updatedGrid: string[][]) => {
+    const totals = updatedGrid.map((row) => parseInt(row[row.length - 1]) || 0);
+    const totalScore = totals.reduce((a, b) => a + b, 0);
+
+    set(ref(db, "users/" + username), {
+      grid: updatedGrid,
+      total: totalScore,
+    });
+  };
+
+  // --- cell click handler ---
+  const handleCellClick = (row: number, col: number) => {
+    if (row > 0 && col > 0 && col < columns.length - 1) {
+      setModalData({ row, col, type: columns[col] });
+      setModalVisible(true);
+    }
+  };
+
+  // --- confirm modal entry ---
+  const handleConfirm = () => {
+    if (modalData.row !== null && modalData.col !== null) {
+      const newGrid = grid.map((r) => [...r]);
+      newGrid[modalData.row][modalData.col] = inputValue;
+      setGrid(newGrid);
+      saveGrid(calculateTotals(newGrid));
+    }
     setInputValue("");
     setCheckbox(false);
-    setRedDice({ diceCount: "", diceSum: "" });
-    setModalVisible(true);
-  };
-
-  const handleInputSubmit = () => {
-    const { row, col, type } = modalData;
-    if (row === null || col === null || type === null) return;
-
-    const updatedGrid = [...grid.map(r => [...r])];
-
-    if (type === "Yellow") {
-      updatedGrid[row][col] = inputValue;
-    } else if (type === "Purple") {
-      updatedGrid[row][col] = (Number(inputValue) * 2).toString();
-    } else if (type === "Blue") {
-      updatedGrid[row][col] = (checkbox ? Number(inputValue) * 2 : Number(inputValue)).toString();
-    } else if (type === "Red") {
-      updatedGrid[row][col] = (Number(redDice.diceCount) * Number(redDice.diceSum)).toString();
-    } else {
-      updatedGrid[row][col] = inputValue;
-    }
-
-    updatedGrid[row][8] = columns.slice(1,8).reduce(
-      (sum,_,i) => sum + (Number(updatedGrid[row][i+1])||0), 0
-    ).toString();
-
-    setGrid(updatedGrid);
-    saveGrid(updatedGrid);
     setModalVisible(false);
   };
 
-  const getCellBackgroundColor = (colIndex:number) => {
-    switch (columns[colIndex]) {
-      case "Yellow": return "rgba(244,255,135,0.75)";
-      case "Purple": return "rgba(232,176,255,0.75)";
-      case "Blue":   return "rgba(135,171,255,0.75)";
-      case "Red":    return "rgba(255,135,135,0.75)";
-      case "Green":  return "rgba(135,255,135,0.75)";
-      case "Clear":  return "rgba(255,255,255,0.75)";
-      case "Pink":   return "rgba(255,192,203,0.75)";
-      default:       return "rgba(240,240,240,0.75)";
-    }
-  };
-    const handleResetAll = () => {
-    if (window.confirm("Are you sure you want to reset all scorecards?")) {
-      const emptyGrid = Array.from({ length: 10 }, () => Array(9).fill(""));
-      const updates: any = {};
-      leaderboard.forEach((u) => {
-        updates[`users/${u.name}/grid`] = emptyGrid;
-        updates[`users/${u.name}/total`] = 0;
-      });
-      update(ref(db), updates);
-    }
+  // --- reset just this user's grid ---
+  const handleReset = () => {
+    const newGrid = Array.from({ length: 10 }, () => Array(9).fill(""));
+    setGrid(newGrid);
+    saveGrid(newGrid);
   };
 
-  const handleDeleteAll = () => {
-    if (window.confirm("Are you sure you want to DELETE ALL users? This cannot be undone.")) {
-      remove(ref(db, "users"));
-      localStorage.removeItem("username"); // clear own username
-      window.location.href = "/"; // redirect to login
-    }
+  // --- reset all players ---
+  const handleResetAll = () => {
+    remove(ref(db, "users"));
+    setUsers([]);
   };
 
+  // --- listen for firebase updates ---
+  useEffect(() => {
+    const usersRef = ref(db, "users");
+    onValue(usersRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const userList = Object.entries(data).map(([name, value]: any) => ({
+          name,
+          total: value.total || 0,
+        }));
+        // sort leaderboard high -> low
+        userList.sort((a, b) => b.total - a.total);
+        setUsers(userList);
+      }
+    });
+  }, []);
 
   return (
-    <div className="container">
-      <div className="image-background" style={{ backgroundImage: `url(${bambooImage})` }}>
-        <img src={pandaImage} alt="Panda" className="panda-image" />
-
-        <div className="grid-container">
-          <div className="row header-row">
-            {columns.map((col, index) => (
-              <div key={index} className="cell header-cell">{col}</div>
-            ))}
-          </div>
-          {rows.map((rowNum, rowIndex) => (
-            <div key={rowIndex} className="row">
-              {columns.map((_, colIndex) => (
-                <div
-                  key={colIndex}
-                  className="cell"
-                  style={{ backgroundColor: colIndex===0?"#ddd":getCellBackgroundColor(colIndex) }}
-                  onClick={() => handleCellPress(rowIndex,colIndex)}
-                >
-                  {colIndex===0 ? rowNum : grid[rowIndex][colIndex]}
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
-
-        <div className="total-container">
-          <span className="total-text">Total Sum: {calculateTotalSum()}</span>
-        </div>
-      </div>
-
-      <div className="bg-gray-800 bg-opacity-80 p-6 rounded-2xl shadow-lg w-full max-w-lg text-white mb-6">
-        <h1 className="text-2xl font-bold mb-4">Welcome, {username}</h1>
-        <p className="text-xl mb-4">Your Score: {score}</p>
-        <div className="flex justify-center gap-4">
-          <button
-            onClick={() => handleScoreChange(1)}
-            className="bg-green-500 hover:bg-green-600 px-4 py-2 rounded-lg"
-          >
-            +1
-          </button>
-          <button
-            onClick={() => handleScoreChange(-1)}
-            className="bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg"
-          >
-            -1
-          </button>
-        </div>
-      </div>
+    <div
+      style={{
+        backgroundImage: `url(${pandaImage})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        minHeight: "100vh",
+        padding: "20px",
+      }}
+    >
+      <h1>Panda Royale Scorecard</h1>
 
       {/* Leaderboard */}
-      <div className="bg-gray-200 p-4 rounded-2xl shadow-lg w-full max-w-md">
-        <h2 className="text-xl font-bold mb-4 text-center">🏆 Leaderboard</h2>
+      <div
+        style={{
+          backgroundColor: "rgba(200,200,200,0.9)",
+          borderRadius: "12px",
+          padding: "15px",
+          maxWidth: "300px",
+          marginBottom: "20px",
+        }}
+      >
+        <h2>Leaderboard</h2>
         <ul>
-          {users.map((u, i) => (
-            <li key={u.name} className="flex justify-between py-1">
-              <span>{i + 1}. {u.name}</span>
-              <span>{u.score}</span>
+          {users.map((user, i) => (
+            <li key={i}>
+              {user.name}: {user.total}
             </li>
           ))}
         </ul>
       </div>
 
-        {/* Admin buttons */}
-        <div className="admin-controls">
-          <button onClick={handleResetAll}>Reset All Scorecards</button>
-          <button onClick={handleDeleteAll}>Delete All Users</button>
-        </div>
-      </div>
+      <button onClick={handleReset}>Reset My Scorecard</button>
+      <button onClick={handleResetAll}>Reset All</button>
 
+      {/* Scorecard grid */}
+      <table>
+        <thead>
+          <tr>
+            {columns.map((col, i) => (
+              <th key={i}>{col}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, rIdx) => (
+            <tr key={rIdx}>
+              <td>{row}</td>
+              {columns.slice(1).map((_, cIdx) => (
+                <td key={cIdx} onClick={() => handleCellClick(rIdx, cIdx + 1)}>
+                  {grid[rIdx][cIdx + 1]}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {/* Modal */}
       {modalVisible && (
-        <div className="modal-overlay">
+        <div className="modal">
           <div className="modal-content">
-            {modalData.type === "Red" ? (
-              <>
-                <label>How many red dice?</label>
-                <input type="number" value={redDice.diceCount} onChange={(e)=>setRedDice({...redDice,diceCount:e.target.value})}/>
-                <label>Dice Sum:</label>
-                <input type="number" value={redDice.diceSum} onChange={(e)=>setRedDice({...redDice,diceSum:e.target.value})}/>
-              </>
-            ) : modalData.type === "Blue" ? (
-              <>
-                <label>Enter blue dice totals:</label>
-                <input type="number" value={inputValue} onChange={(e)=>setInputValue(e.target.value)} />
-                <div>
-                  <label>Sparkly blue?</label>
-                  <input type="checkbox" checked={checkbox} onChange={()=>setCheckbox(!checkbox)} />
-                </div>
-              </>
-            ) : (
-              <>
-                <label>Enter a value:</label>
-                <input type="number" value={inputValue} onChange={(e)=>setInputValue(e.target.value)} />
-              </>
-            )}
-            <button onClick={handleInputSubmit}>Submit</button>
+            <h2>Enter {modalData.type} Value</h2>
+            <input
+              type="text"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+            />
+            <label>
+              <input
+                type="checkbox"
+                checked={checkbox}
+                onChange={() => setCheckbox(!checkbox)}
+              />
+              Bamboo
+            </label>
+            {checkbox && <img src={bambooImage} alt="bamboo" width="30" />}
+            <button onClick={handleConfirm}>Confirm</button>
+            <button onClick={() => setModalVisible(false)}>Cancel</button>
           </div>
         </div>
       )}
