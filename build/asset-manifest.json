@@ -1,15 +1,15 @@
 {
   "files": {
     "main.css": "/panda-royale/static/css/main.a605bd48.css",
-    "main.js": "/panda-royale/static/js/main.2aaf92fd.js",
+    "main.js": "/panda-royale/static/js/main.7a942ff9.js",
     "static/media/bamboo.png": "/panda-royale/static/media/bamboo.97a92f2ba4a91ee23ec1.png",
     "static/media/panda.jpg": "/panda-royale/static/media/panda.4b8cb67354276e1ee6fb.jpg",
     "index.html": "/panda-royale/index.html",
     "main.a605bd48.css.map": "/panda-royale/static/css/main.a605bd48.css.map",
-    "main.2aaf92fd.js.map": "/panda-royale/static/js/main.2aaf92fd.js.map"
+    "main.7a942ff9.js.map": "/panda-royale/static/js/main.7a942ff9.js.map"
   },
   "entrypoints": [
     "static/css/main.a605bd48.css",
-    "static/js/main.2aaf92fd.js"
+    "static/js/main.7a942ff9.js"
   ]
 }
