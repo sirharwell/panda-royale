@@ -9,10 +9,8 @@ type ModalData = { row: number | null; col: number | null; type: string | null; 
 
 const Scorecard = () => {
   const username = localStorage.getItem("username") || "Guest";
-
   const columns = ["Round","Yellow","Purple","Blue","Red","Green","Clear","Pink","Total"];
   const rows = Array.from({ length: 10 }, (_, i) => i + 1);
-
   const [grid, setGrid] = useState(Array.from({ length: 10 }, () => Array(9).fill("")));
   const [modalVisible, setModalVisible] = useState(false);
   const [modalData, setModalData] = useState<ModalData>({ row: null, col: null, type: null });
@@ -20,31 +18,37 @@ const Scorecard = () => {
   const [checkbox, setCheckbox] = useState(false);
   const [redDice, setRedDice] = useState({ diceCount: "", diceSum: "" });
   const [leaderboard, setLeaderboard] = useState<{name:string,total:number}[]>([]);
-
+  const location = useLocation();
+  const username = location.state?.username;
+  const [score, setScore] = useState(0);
+  const [users, setUsers] = useState<{ name: string, score: number }[]>([]);
   const calculateTotalSum = (gridData = grid) => {
     return gridData.reduce((sum, row) => sum + (Number(row[8]) || 0), 0);
   };
 
   // Load user data from Firebase
   useEffect(() => {
-    const userRef = ref(db, `users/${username}/grid`);
-    onValue(userRef, (snapshot) => {
-      if (snapshot.exists()) {
-        setGrid(snapshot.val());
-      }
-    });
+    const db = getDatabase();
+    const usersRef = ref(db, "users");
 
-    // Leaderboard subscription
-    const allUsersRef = ref(db, "users");
-    onValue(allUsersRef, (snapshot) => {
+    return onValue(usersRef, (snapshot) => {
       const data = snapshot.val() || {};
-      const lb = Object.keys(data).map(name => ({
+      const formatted = Object.entries(data).map(([name, info]: any) => ({
         name,
-        total: data[name].total || 0
+        score: info.score || 0
       }));
-      setLeaderboard(lb);
+      // sort highest → lowest
+      formatted.sort((a, b) => b.score - a.score);
+      setUsers(formatted);
     });
-  }, [username]);
+  }, []);
+
+  const handleScoreChange = (delta: number) => {
+    const db = getDatabase();
+    const newScore = score + delta;
+    setScore(newScore);
+    set(ref(db, "users/" + username), { score: newScore });
+  };
 
   const saveGrid = (newGrid: string[][]) => {
     const total = calculateTotalSum(newGrid);
@@ -156,12 +160,37 @@ const Scorecard = () => {
         </div>
       </div>
 
+      <div className="bg-gray-800 bg-opacity-80 p-6 rounded-2xl shadow-lg w-full max-w-lg text-white mb-6">
+        <h1 className="text-2xl font-bold mb-4">Welcome, {username}</h1>
+        <p className="text-xl mb-4">Your Score: {score}</p>
+        <div className="flex justify-center gap-4">
+          <button
+            onClick={() => handleScoreChange(1)}
+            className="bg-green-500 hover:bg-green-600 px-4 py-2 rounded-lg"
+          >
+            +1
+          </button>
+          <button
+            onClick={() => handleScoreChange(-1)}
+            className="bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg"
+          >
+            -1
+          </button>
+        </div>
+      </div>
+
       {/* Leaderboard */}
-      <div className="leaderboard">
-        <h2>Leaderboard</h2>
-        {leaderboard.map((u) => (
-          <div key={u.name}>{u.name}: {u.total}</div>
-        ))}
+      <div className="bg-gray-200 p-4 rounded-2xl shadow-lg w-full max-w-md">
+        <h2 className="text-xl font-bold mb-4 text-center">🏆 Leaderboard</h2>
+        <ul>
+          {users.map((u, i) => (
+            <li key={u.name} className="flex justify-between py-1">
+              <span>{i + 1}. {u.name}</span>
+              <span>{u.score}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
 
         {/* Admin buttons */}
         <div className="admin-controls">
