@@ -134,8 +134,8 @@ const Scorecard = () => {
   }
 };
 
-const handleResetAll = () => {
-if (window.confirm("Are you sure you want to reset all scorecards?")) {
+const handleDeleteAll = () => {
+if (window.confirm("Are you sure you want to reset all Users?")) {
   // remove all users completely
   const db = getDatabase();
   const usersRef = ref(db, "users");
