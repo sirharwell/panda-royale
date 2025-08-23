@@ -145,7 +145,7 @@ if (window.confirm("Are you sure you want to reset all Users?")) {
       localStorage.removeItem("username");
 
       // send the user back to login
-      navigate("/");
+      navigate("/LoginPage");
     })
     .catch((error) => {
       console.error("Error resetting scorecards:", error);
