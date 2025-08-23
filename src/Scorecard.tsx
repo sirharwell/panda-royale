@@ -4,7 +4,7 @@ import pandaImage from "./panda.jpg";
 import bambooImage from "./bamboo.png";
 import { getDatabase, ref, set, onValue, remove, update, get } from "firebase/database";
 import "./App.css";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 
 type ModalData = { row: number | null; col: number | null; type: string | null; };
 
@@ -26,8 +26,6 @@ const Scorecard = () => {
   const calculateTotalSum = (gridData = grid) => {
     return gridData.reduce((sum, row) => sum + (Number(row[8]) || 0), 0);
   };
-
-  const navigate = useNavigate();
 
   // Load user data from Firebase
   useEffect(() => {
@@ -134,24 +132,13 @@ const Scorecard = () => {
   }
 };
 
-const handleDeleteAll = () => {
-if (window.confirm("Are you sure you want to reset all Users?")) {
-  // remove all users completely
-  const db = getDatabase();
-  const usersRef = ref(db, "users");
-  remove(usersRef)
-    .then(() => {
-      // clear localStorage so there's no "logged in" username
-      localStorage.removeItem("username");
-
-      // send the user back to login
-      navigate("/LoginPage");
-    })
-    .catch((error) => {
-      console.error("Error resetting scorecards:", error);
-    });
-}
-};
+  const handleDeleteAll = () => {
+    if (window.confirm("Are you sure you want to DELETE ALL users? This cannot be undone.")) {
+      remove(ref(db, "users"));
+      localStorage.removeItem("username"); // clear own username
+      window.location.href = "https://sirharwell.github.io/panda-royale/"; // redirect to login
+    }
+  };
 
 
   return (
