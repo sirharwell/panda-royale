@@ -8,6 +8,13 @@ import { useLocation } from "react-router-dom";
 
 type ModalData = { row: number | null; col: number | null; type: string | null; };
 
+
+  interface UserData {
+  name: string;
+  score: number;
+  grid: string[][];
+}
+
 const Scorecard = () => {
   const location = useLocation();
   const columns = ["Round","Yellow","Purple","Blue","Red","Green","Clear","Pink","Total"];
@@ -21,11 +28,11 @@ const Scorecard = () => {
   const [redDice, setRedDice] = useState({ diceCount: "", diceSum: "" });
   const [leaderboard, setLeaderboard] = useState<{name:string,total:number}[]>([]);
   const [score, setScore] = useState(0);
-  const [users, setUsers] = useState<{ name: string, score: number }[]>([]);
-
+  const [users, setUsers] = useState<UserData[]>([]);
   const calculateTotalSum = (gridData = grid) => {
     return gridData.reduce((sum, row) => sum + (Number(row[8]) || 0), 0);
   };
+
 
   // Load user data from Firebase
   useEffect(() => {
@@ -37,6 +44,7 @@ const Scorecard = () => {
       const formatted = Object.entries(data).map(([name, info]: any) => ({
         name,
         score: info.total || 0, // use total instead of score
+        grid: info.grid || Array.from({ length: 10 }, () => Array(9).fill("")),
       }));
 
       // sort highest → lowest
@@ -125,7 +133,6 @@ const Scorecard = () => {
   };
   const handleResetAll = async () => {
   if (!window.confirm("Are you sure you want to reset all scorecards?")) return;
-
   const db = getDatabase();
   const usersSnap = await get(ref(db, "users"));
   if (!usersSnap.exists()) return;
@@ -146,6 +153,30 @@ const Scorecard = () => {
     setGrid(emptyGrid);  // local React state
   }
 };
+
+const getCellStyle = (rowIndex: number, colIndex: number) => {
+  const baseColor = getCellBackgroundColor(colIndex);
+
+  // Only apply special logic for Yellow column
+  if (columns[colIndex] === "Yellow") {
+    const yellowValues = users.map(u => {
+      const rowVal = u?.grid?.[rowIndex]?.[colIndex];
+      return Number(rowVal) || 0;
+    });
+    const max = Math.max(...yellowValues);
+    const myVal = Number(grid[rowIndex][colIndex]) || 0;
+
+    if (myVal > 0 && myVal === max) {
+      const isTied = yellowValues.filter(v => v === max).length > 1;
+      return {
+        backgroundColor: isTied ? "rgba(100,149,237,0.8)" : "rgba(0,200,0,0.8)" // blue if tie, green if best
+      };
+    }
+  }
+
+  return { backgroundColor: baseColor };
+};
+
 
   const handleDeleteAll = () => {
     if (window.confirm("Are you sure you want to DELETE ALL users? This cannot be undone.")) {
@@ -180,7 +211,7 @@ const Scorecard = () => {
                 <div
                   key={colIndex}
                   className="cell"
-                  style={{ backgroundColor: colIndex===0?"#ddd":getCellBackgroundColor(colIndex) }}
+                  style={colIndex === 0 ? { backgroundColor: "#ddd" } : getCellStyle(rowIndex, colIndex)}
                   onClick={() => handleCellPress(rowIndex,colIndex)}
                 >
                   {colIndex===0 ? rowNum : grid[rowIndex][colIndex]}
@@ -193,10 +224,6 @@ const Scorecard = () => {
         <div className="total-container">
           <span className="total-text">Total Sum: {calculateTotalSum()}</span>
         </div>
-
-
-
-
 
       {modalVisible && (
         <div className="modal-overlay">
