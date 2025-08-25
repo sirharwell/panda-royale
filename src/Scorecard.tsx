@@ -29,6 +29,8 @@ const Scorecard = () => {
   const [leaderboard, setLeaderboard] = useState<{name:string,total:number}[]>([]);
   const [score, setScore] = useState(0);
   const [users, setUsers] = useState<UserData[]>([]);
+  const [roundLeaders, setRoundLeaders] = useState<{name:string,roundScore:number}[]>([]);
+  const [roundNumber, setRoundNumber] = useState<number>(10); // default = last row
   const calculateTotalSum = (gridData = grid) => {
     return gridData.reduce((sum, row) => sum + (Number(row[8]) || 0), 0);
   };
@@ -66,6 +68,55 @@ const Scorecard = () => {
   });
 }, [username]);
 
+useEffect(() => {
+  const db = getDatabase();
+  const usersRef = ref(db, "users");
+
+  return onValue(usersRef, (snapshot) => {
+    const data = snapshot.val() || {};
+    const formatted = Object.entries(data).map(([name, info]: any) => ({
+      name,
+      total: info.total || 0,
+      grid: info.grid || []
+    }));
+
+    // leaderboard (total scores)
+    const sorted: UserData[] = formatted
+      .map(u => ({
+        name: u.name,
+        score: u.total,
+        grid: u.grid || Array.from({ length: 10 }, () => Array(9).fill("")),
+      }))
+      .sort((a, b) => b.score - a.score);
+
+    setUsers(sorted);
+
+    // helper to find last filled row in a grid
+    const getLatestFilledRow = (grid: string[][]): number => {
+      for (let i = grid.length - 1; i >= 0; i--) {
+        if (grid[i].some(cell => cell !== "")) {
+          return i;
+        }
+      }
+      return 0; // default to first row if all empty
+    };
+
+    // round leaderboard (latest filled row per user)
+    const roundScores = formatted.map(u => {
+      const latestRow = getLatestFilledRow(u.grid); // check THIS user's grid
+      return {
+        name: u.name,
+        roundScore: Number(u.grid[latestRow]?.[8] || 0), // total for that row
+      };
+    }).sort((a, b) => b.roundScore - a.roundScore);
+
+    setRoundLeaders(roundScores);
+
+    // determine which row to display for round number (optional)
+    const latestRowOverall = Math.max(...formatted.map(u => getLatestFilledRow(u.grid)));
+    setRoundNumber(Number(formatted[0]?.grid[latestRowOverall]?.[0] || latestRowOverall + 1));
+  });
+}, []);
 
   const handleScoreChange = (delta: number) => {
     const db = getDatabase();
@@ -254,34 +305,33 @@ const getCellStyle = (rowIndex: number, colIndex: number) => {
           </div>
         </div>
       )}
-      <div
-    style={{
-      backgroundColor: "rgba(240,240,240,0.9)",
-      borderRadius: "12px",
-      padding: "20px",
-      maxWidth: "400px",
-      margin: "20px auto",
-      boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
-    }}
-  >
+      <div style={{ display: "flex", gap: "20px", justifyContent: "center" }}>
+  {/* Total leaderboard */}
+  <div style={{ backgroundColor: "rgba(240,240,240,0.9)", borderRadius: "12px", padding: "20px", width: "300px" }}>
     <h2 style={{ textAlign: "center", marginBottom: "12px" }}>Leaderboard</h2>
     <ul style={{ listStyle: "none", padding: 0 }}>
       {users.map((user, index) => (
-        <li
-          key={index}
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            padding: "6px 0",
-            borderBottom: "1px solid #ddd",
-          }}
-        >
+        <li key={index} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid #ddd" }}>
           <span>{user.name}</span>
           <span>{user.score}</span>
         </li>
       ))}
     </ul>
   </div>
+
+  {/* Round leaderboard */}
+  <div style={{ backgroundColor: "rgba(240,240,240,0.9)", borderRadius: "12px", padding: "20px", width: "300px" }}>
+    <h2 style={{ textAlign: "center", marginBottom: "12px" }}>Round {roundNumber}</h2>
+    <ul style={{ listStyle: "none", padding: 0 }}>
+      {roundLeaders.map((user, index) => (
+        <li key={index} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid #ddd" }}>
+          <span>{user.name}</span>
+          <span>{user.roundScore}</span>
+        </li>
+      ))}
+    </ul>
+  </div>
+</div>
       {/* Admin buttons */}
       <div className="admin-controls">
         <button onClick={handleResetAll}>Reset All Scorecards</button>
