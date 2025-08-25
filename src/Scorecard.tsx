@@ -36,13 +36,28 @@ const Scorecard = () => {
       const data = snapshot.val() || {};
       const formatted = Object.entries(data).map(([name, info]: any) => ({
         name,
-        score: info.total || 0   // use total instead of score
+        score: info.total || 0, // use total instead of score
       }));
+
       // sort highest → lowest
       formatted.sort((a, b) => b.score - a.score);
       setUsers(formatted);
     });
   }, []);
+
+  useEffect(() => {
+  if (!username) return;
+  const db = getDatabase();
+  const userRef = ref(db, "users/" + username);
+
+  return onValue(userRef, (snapshot) => {
+    const data = snapshot.val();
+    if (data?.grid) {
+      setGrid(data.grid);
+    }
+  });
+}, [username]);
+
 
   const handleScoreChange = (delta: number) => {
     const db = getDatabase();
